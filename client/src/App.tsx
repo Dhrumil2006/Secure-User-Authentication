@@ -9,6 +9,7 @@ import NotFound from "@/pages/not-found";
 import Landing from "@/pages/landing";
 import Home from "@/pages/home";
 import Profile from "@/pages/profile";
+import Admin from "@/pages/admin";
 import { Loader2 } from "lucide-react";
 
 function LoadingScreen() {
@@ -37,6 +38,7 @@ function Router() {
         <>
           <Route path="/" component={Home} />
           <Route path="/profile" component={Profile} />
+          <Route path="/admin" component={Admin} />
         </>
       )}
       <Route component={NotFound} />

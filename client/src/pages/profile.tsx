@@ -1,11 +1,16 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
+import { useMutation } from "@tanstack/react-query";
+import { queryClient, apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { 
   Shield, 
   ArrowLeft, 
@@ -13,13 +18,49 @@ import {
   Mail, 
   Calendar, 
   User as UserIcon,
-  RefreshCw
+  RefreshCw,
+  Edit2,
+  Save,
+  X,
+  Crown
 } from "lucide-react";
 import { Link } from "wouter";
 
 export default function Profile() {
   const { user, isLoading, isAuthenticated } = useAuth();
   const { toast } = useToast();
+  const [isEditing, setIsEditing] = useState(false);
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+
+  useEffect(() => {
+    if (user) {
+      setFirstName(user.firstName || "");
+      setLastName(user.lastName || "");
+    }
+  }, [user]);
+
+  const updateProfileMutation = useMutation({
+    mutationFn: async (data: { firstName?: string; lastName?: string }) => {
+      const res = await apiRequest("PATCH", "/api/profile", data);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      setIsEditing(false);
+      toast({
+        title: "Profile updated",
+        description: "Your profile has been updated successfully.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update profile",
+        variant: "destructive",
+      });
+    },
+  });
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -128,28 +169,105 @@ export default function Profile() {
               <CardTitle className="text-2xl" data-testid="text-profile-name">
                 {getDisplayName()}
               </CardTitle>
-              <CardDescription data-testid="text-profile-email">
-                {user?.email || "No email provided"}
-              </CardDescription>
+              <div className="flex items-center justify-center gap-2">
+                <CardDescription data-testid="text-profile-email">
+                  {user?.email || "No email provided"}
+                </CardDescription>
+                <Badge 
+                  variant={user?.role === "admin" ? "default" : "secondary"} 
+                  className="capitalize"
+                  data-testid="badge-role"
+                >
+                  {user?.role === "admin" && <Crown className="mr-1 h-3 w-3" />}
+                  {user?.role || "user"}
+                </Badge>
+              </div>
             </CardHeader>
             <CardContent>
               <Separator className="mb-6" />
               
               <div className="space-y-6">
                 <div>
-                  <h3 className="mb-4 text-lg font-semibold">Account Details</h3>
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-4 rounded-md bg-muted p-4">
-                      <UserIcon className="h-5 w-5 text-muted-foreground" />
-                      <div className="flex-1">
-                        <p className="text-sm font-medium">Full Name</p>
-                        <p className="text-sm text-muted-foreground" data-testid="text-full-name">
-                          {user?.firstName && user?.lastName 
-                            ? `${user.firstName} ${user.lastName}`
-                            : "Not provided"}
-                        </p>
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-semibold">Account Details</h3>
+                    {!isEditing ? (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setIsEditing(true)}
+                        data-testid="button-edit-profile"
+                      >
+                        <Edit2 className="mr-2 h-4 w-4" />
+                        Edit Profile
+                      </Button>
+                    ) : (
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setIsEditing(false);
+                            setFirstName(user?.firstName || "");
+                            setLastName(user?.lastName || "");
+                          }}
+                          data-testid="button-cancel-edit"
+                        >
+                          <X className="mr-2 h-4 w-4" />
+                          Cancel
+                        </Button>
+                        <Button
+                          size="sm"
+                          onClick={() => updateProfileMutation.mutate({ firstName, lastName })}
+                          disabled={updateProfileMutation.isPending}
+                          data-testid="button-save-profile"
+                        >
+                          {updateProfileMutation.isPending ? (
+                            <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                          ) : (
+                            <Save className="mr-2 h-4 w-4" />
+                          )}
+                          Save
+                        </Button>
                       </div>
-                    </div>
+                    )}
+                  </div>
+                  <div className="space-y-4">
+                    {isEditing ? (
+                      <div className="rounded-md bg-muted p-4 space-y-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="firstName">First Name</Label>
+                          <Input
+                            id="firstName"
+                            value={firstName}
+                            onChange={(e) => setFirstName(e.target.value)}
+                            placeholder="Enter your first name"
+                            data-testid="input-first-name"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="lastName">Last Name</Label>
+                          <Input
+                            id="lastName"
+                            value={lastName}
+                            onChange={(e) => setLastName(e.target.value)}
+                            placeholder="Enter your last name"
+                            data-testid="input-last-name"
+                          />
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-4 rounded-md bg-muted p-4">
+                        <UserIcon className="h-5 w-5 text-muted-foreground" />
+                        <div className="flex-1">
+                          <p className="text-sm font-medium">Full Name</p>
+                          <p className="text-sm text-muted-foreground" data-testid="text-full-name">
+                            {user?.firstName && user?.lastName 
+                              ? `${user.firstName} ${user.lastName}`
+                              : "Not provided"}
+                          </p>
+                        </div>
+                      </div>
+                    )}
 
                     <div className="flex items-center gap-4 rounded-md bg-muted p-4">
                       <Mail className="h-5 w-5 text-muted-foreground" />

@@ -2,6 +2,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { 
   Shield, 
@@ -10,7 +11,9 @@ import {
   LogOut, 
   CheckCircle2, 
   Clock,
-  Lock
+  Lock,
+  Crown,
+  Users
 } from "lucide-react";
 import { Link } from "wouter";
 
@@ -59,6 +62,14 @@ export default function Home() {
           </div>
           <div className="flex items-center gap-4">
             <ThemeToggle />
+            {user?.role === "admin" && (
+              <Link href="/admin">
+                <Button variant="ghost" size="icon" data-testid="button-admin">
+                  <Users className="h-5 w-5" />
+                  <span className="sr-only">Admin Dashboard</span>
+                </Button>
+              </Link>
+            )}
             <Link href="/profile">
               <Button variant="ghost" size="icon" data-testid="button-profile">
                 <User className="h-5 w-5" />
@@ -189,6 +200,17 @@ export default function Home() {
                   <div className="flex justify-between">
                     <span className="text-sm text-muted-foreground">Email</span>
                     <span className="text-sm">{user?.email || "Not provided"}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm text-muted-foreground">Role</span>
+                    <Badge 
+                      variant={user?.role === "admin" ? "default" : "secondary"} 
+                      className="capitalize"
+                      data-testid="badge-user-role"
+                    >
+                      {user?.role === "admin" && <Crown className="mr-1 h-3 w-3" />}
+                      {user?.role || "user"}
+                    </Badge>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-sm text-muted-foreground">Last Updated</span>
